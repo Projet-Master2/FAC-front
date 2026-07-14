@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
+// import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
 // Routes qui nécessitent d'être connecté
 const authRequiredRoutes = ['home']
@@ -24,13 +25,18 @@ const router = createRouter({
       component: Login,
       meta: { guestOnly: true },
     },
+    // Route mockup — décommenter pour réactiver (/mockup/login)
+    // {
+    //   path: '/mockup/login',
+    //   name: 'mockup-login',
+    //   component: LoginMockup,
+    // },
   ],
 })
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // Récupère le profil si on a un token mais pas encore de user
   if (auth.accessToken && !auth.user) {
     await auth.fetchMe()
   }
