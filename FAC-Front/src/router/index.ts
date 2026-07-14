@@ -4,6 +4,12 @@ import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
+// Routes qui nécessitent d'être connecté
+const authRequiredRoutes = ['home']
+
+// Routes accessibles uniquement sans session (redirection si déjà connecté)
+const guestOnlyRoutes = ['login']
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -45,3 +51,4 @@ router.beforeEach(async (to) => {
 })
 
 export default router
+
