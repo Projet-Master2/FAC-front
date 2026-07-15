@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
+import Profile from '../views/Profile.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
 // Routes qui nécessitent d'être connecté
@@ -23,6 +24,12 @@ const router = createRouter({
       name: 'login',
       component: Login,
       meta: { guestOnly: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: Profile,
+      meta: { requiresAuth: true },
     },
     // Route mockup — décommenter pour réactiver (/mockup/login)
     // {
