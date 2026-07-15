@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import Profile from '../views/Profile.vue'
+import Search from '../views/Search.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
 // Routes qui nécessitent d'être connecté
@@ -30,6 +31,11 @@ const router = createRouter({
       name: 'profile',
       component: Profile,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/search',
+      name: 'search',
+      component: Search,
     },
     // Route mockup — décommenter pour réactiver (/mockup/login)
     // {
