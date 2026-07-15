@@ -81,6 +81,23 @@ export const recipesApi = {
   deleteRecipe: (id: string) =>
     apiClient.delete(`/api/recipes/${id}`),
 
+  addIngredient: (id: string, payload: { ingredientId: string; quantity?: number; unit?: string }) =>
+    apiClient.post(`/api/recipes/${id}/ingredients`, payload),
+
+  addStep: (id: string, payload: { order: number; description: string }) =>
+    apiClient.post(`/api/recipes/${id}/steps`, payload),
+
+  uploadImage: (id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient.post(`/api/recipes/${id}/image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  publish: (id: string) =>
+    apiClient.patch(`/api/recipes/${id}`, { published: true }),
+
   addFavorite: (id: string) =>
     apiClient.post(`/api/recipes/${id}/favorites`),
 
