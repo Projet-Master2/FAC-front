@@ -111,13 +111,21 @@ async function saveProfile() {
   saveLoading.value = true
   saveError.value   = null
   try {
+    // 1. Upload avatar si un fichier a été sélectionné
+    if (avatarFile.value) {
+      const { data: avatarData } = await usersApi.uploadAvatar(auth.user.id, avatarFile.value)
+      if (auth.user) auth.user.avatar = avatarData.data.avatar
+      avatarFile.value    = null
+      avatarPreview.value = null
+    }
+
+    // 2. Mise à jour des infos textuelles
     const payload: UpdateUserPayload = {
       name:   editForm.value.name,
       pseudo: editForm.value.pseudo || undefined,
       bio:    editForm.value.bio    || undefined,
     }
     const { data } = await usersApi.updateUser(auth.user.id, payload)
-    // Met a jour le store
     if (auth.user) {
       auth.user.name   = data.data.name
       auth.user.pseudo = data.data.pseudo

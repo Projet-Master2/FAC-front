@@ -17,6 +17,14 @@ export const usersApi = {
   updateUser: (id: string, payload: UpdateUserPayload) =>
     apiClient.patch<{ data: AuthUser }>(`/api/users/${id}`, payload),
 
+  uploadAvatar: (id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiClient.post<{ data: AuthUser }>(`/api/users/${id}/avatar`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
   deleteUser: (id: string) =>
     apiClient.delete(`/api/users/${id}`),
 
