@@ -5,6 +5,7 @@ import Login from '../views/Login.vue'
 import Profile from '../views/Profile.vue'
 import Search from '../views/Search.vue'
 import RecipeCreate from '../views/RecipeCreate.vue'
+import RecipeDetail from '../views/RecipeDetail.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
 // Routes qui nécessitent d'être connecté
@@ -43,6 +44,11 @@ const router = createRouter({
       name: 'recipe-create',
       component: RecipeCreate,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/recipes/:id',
+      name: 'recipe-detail',
+      component: RecipeDetail,
     },
     // Route mockup — décommenter pour réactiver (/mockup/login)
     // {
