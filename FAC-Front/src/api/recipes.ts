@@ -36,6 +36,30 @@ export interface RecipeSummary {
   _count:        { ratings: number; comments: number; favorites: number }
 }
 
+export interface RecipeIngredientDetail {
+  id:       string
+  quantity: number
+  unit:     string
+  ingredient: {
+    id:       string
+    name:     string
+    iconName: string | null
+  }
+}
+
+export interface RecipeStep {
+  id:          string
+  order:       number
+  description: string
+}
+
+export interface RecipeDetail extends RecipeSummary {
+  ingredients: RecipeIngredientDetail[]
+  steps:       RecipeStep[]
+  ratings:     { score: number }[]
+  avgRating:   number | null
+}
+
 export interface RecipesQuery {
   q?:          string
   difficulty?: Difficulty
