@@ -2,10 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { recipesApi, type RecipeDetail } from '@/api/recipes'
+import { recipesApi, type RecipeDetail, type RecipeReactionType } from '@/api/recipes'
 import { commentsApi, type Comment } from '@/api/comments'
 import Navbar from '@/components/Navbar.vue'
 import AppButton from '@/components/AppButton.vue'
+import RecipeReactionPicker from '@/components/RecipeReactionPicker.vue'
 
 defineOptions({ name: 'RecipeDetailView' })
 
@@ -50,6 +51,10 @@ async function loadRecipe() {
     const { data } = await recipesApi.getRecipe(id)
     recipe.value = data.data as unknown as RecipeDetail
     currentServings.value = recipe.value.servings
+    const reactionTypes = recipe.value.reactions?.map(reaction => reaction.type) ?? []
+    liked.value = reactionTypes.includes('LIKE')
+    disliked.value = reactionTypes.includes('DISLIKE')
+    loved.value = reactionTypes.includes('LOVE')
   } catch {
     error.value = 'Recette introuvable'
   } finally {
@@ -73,6 +78,20 @@ const hoverRating   = ref(0)
 const ratingLoading = ref(false)
 const ratingDone    = ref(false)
 
+const reactionLoading = ref(false)
+const liked = ref(false)
+const disliked = ref(false)
+const loved = ref(false)
+
+const reactionSummary = computed(() => {
+  if (!recipe.value?.reactions?.length) return []
+
+  return (['LIKE', 'DISLIKE', 'LOVE'] as RecipeReactionType[]).map(type => {
+    const count = recipe.value?.reactions?.filter(reaction => reaction.type === type).length ?? 0
+    return { type, count }
+  }).filter(item => item.count > 0)
+})
+
 const avgRating = computed(() => {
   if (!recipe.value?.ratings?.length) return null
   const sum = recipe.value.ratings.reduce((s, r) => s + r.score, 0)
@@ -90,6 +109,44 @@ async function submitRating(score: number) {
     if (recipe.value) recipe.value.ratings.push({ score })
   } finally {
     ratingLoading.value = false
+  }
+}
+
+async function toggleReaction(type: RecipeReactionType) {
+  if (!auth.isAuthenticated) { router.push('/login') ; return }
+  if (reactionLoading.value) return
+
+  reactionLoading.value = true
+  try {
+    if (type === 'LIKE') {
+      if (liked.value) {
+        liked.value = false
+        await recipesApi.removeReaction(id, 'LIKE').catch(() => undefined)
+      } else {
+        liked.value = true
+        disliked.value = false
+        await recipesApi.addReaction(id, 'LIKE').catch(() => undefined)
+      }
+    } else if (type === 'DISLIKE') {
+      if (disliked.value) {
+        disliked.value = false
+        await recipesApi.removeReaction(id, 'DISLIKE').catch(() => undefined)
+      } else {
+        disliked.value = true
+        liked.value = false
+        await recipesApi.addReaction(id, 'DISLIKE').catch(() => undefined)
+      }
+    } else if (type === 'LOVE') {
+      if (loved.value) {
+        loved.value = false
+        await recipesApi.removeReaction(id, 'LOVE').catch(() => undefined)
+      } else {
+        loved.value = true
+        await recipesApi.addReaction(id, 'LOVE').catch(() => undefined)
+      }
+    }
+  } finally {
+    reactionLoading.value = false
   }
 }
 
@@ -180,9 +237,14 @@ onMounted(() => { loadRecipe() ; loadComments() })
                 {{ t.tag.name }}
               </span>
             </div>
-            <AppButton v-if="isAuthor" variant="secondary" size="sm" @click="router.push(`/recipes/${recipe.id}/edit`)">
-              Modifier la recette
-            </AppButton>
+            <div class="recipe-header__actions">
+              <AppButton variant="ghost" size="sm" @click="router.push('/search')">
+                ← Retour
+              </AppButton>
+              <AppButton v-if="isAuthor" variant="secondary" size="sm" @click="router.push(`/recipes/${recipe.id}/edit`)">
+                Modifier la recette
+              </AppButton>
+            </div>
           </div>
 
           <h1 class="recipe-title">{{ recipe.title }}</h1>
@@ -295,6 +357,26 @@ onMounted(() => { loadRecipe() ; loadComments() })
             </div>
             <span v-if="ratingDone" class="rating-user__thanks">Merci pour votre note !</span>
           </div>
+
+          <div class="reaction-section">
+            <div v-if="reactionSummary.length > 0" class="reaction-summary">
+              <span v-for="item in reactionSummary" :key="item.type" class="reaction-summary__item">
+                <span class="reaction-summary__emoji">{{ item.type === 'LIKE' ? '👍' : item.type === 'DISLIKE' ? '👎' : '❤️' }}</span>
+                <span>{{ item.count }}</span>
+              </span>
+            </div>
+
+            <RecipeReactionPicker
+              :like-active="liked"
+              :dislike-active="disliked"
+              :love-active="loved"
+              :loading="reactionLoading"
+              :disabled="!auth.isAuthenticated"
+              @toggle-like="toggleReaction('LIKE')"
+              @toggle-dislike="toggleReaction('DISLIKE')"
+              @toggle-love="toggleReaction('LOVE')"
+            />
+          </div>
         </section>
 
         <!-- Commentaires -->
@@ -397,6 +479,7 @@ onMounted(() => { loadRecipe() ; loadComments() })
 .recipe-header { display: flex; flex-direction: column; gap: var(--space-4); }
 .recipe-header__top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); }
 .recipe-header__badges { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.recipe-header__actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 
 .recipe-badge {
   padding: 4px 12px; border-radius: var(--radius-full);
@@ -482,6 +565,10 @@ onMounted(() => { loadRecipe() ; loadComments() })
 
 /* Notation */
 .recipe-rating { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); padding: var(--space-6); }
+.reaction-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.reaction-summary { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.reaction-summary__item { display: inline-flex; align-items: center; gap: var(--space-1); padding: 4px 8px; border-radius: var(--radius-full); background: var(--color-primary-bg); color: var(--color-primary-dark); font-size: var(--text-sm); font-weight: var(--font-weight-medium); }
+.reaction-summary__emoji { font-size: 16px; line-height: 1; }
 .rating-display { display: flex; align-items: center; gap: var(--space-4); }
 .rating-display__stars { display: flex; gap: 4px; }
 .rating-star { font-size: 28px; color: var(--color-border); line-height: 1; transition: color var(--transition-fast); }
