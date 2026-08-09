@@ -1,6 +1,7 @@
 import apiClient from './client'
 
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
+export type RecipeReactionType = 'LIKE' | 'DISLIKE' | 'LOVE'
 
 export interface RecipeAuthor {
   id:     string
@@ -33,6 +34,7 @@ export interface RecipeSummary {
   author:        RecipeAuthor
   tags:          { tag: RecipeTag }[]
   media:         RecipeMedia[]
+  reactions?:    { type: RecipeReactionType }[]
   _count:        { ratings: number; comments: number; favorites: number }
 }
 
@@ -58,6 +60,7 @@ export interface RecipeDetail extends RecipeSummary {
   steps:       RecipeStep[]
   ratings:     { score: number }[]
   avgRating:   number | null
+  reactions?:  { type: RecipeReactionType }[]
 }
 
 export interface RecipesQuery {
@@ -130,4 +133,10 @@ export const recipesApi = {
 
   rateRecipe: (id: string, score: number) =>
     apiClient.post(`/api/recipes/${id}/ratings`, { score }),
+
+  addReaction: (id: string, type: RecipeReactionType) =>
+    apiClient.post(`/api/recipes/${id}/reactions`, { type }),
+
+  removeReaction: (id: string, type: RecipeReactionType) =>
+    apiClient.delete(`/api/recipes/${id}/reactions/${type}`),
 }
