@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, getCurrentInstance } from 'vue'
 import type { RecipesQuery } from '@/api/recipes'
 import { tagsApi, type Tag } from '@/api/tags'
 
@@ -29,7 +29,6 @@ function reset() {
 }
 
 // Accede au modelValue depuis le parent
-import { getCurrentInstance } from 'vue'
 function currentValue(): RecipesQuery {
   return getCurrentInstance()?.props.modelValue as RecipesQuery ?? {}
 }
