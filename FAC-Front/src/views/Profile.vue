@@ -155,6 +155,27 @@ const paginationRange = computed(() => {
   return range
 })
 
+// ── Suppression du compte ────────────────────────────────────────────────────
+const showDeleteConfirm = ref(false)
+const deleteLoading     = ref(false)
+const deleteError       = ref<string | null>(null)
+
+async function deleteAccount() {
+  if (!auth.user) return
+  deleteLoading.value = true
+  deleteError.value   = null
+  try {
+    await usersApi.deleteUser(auth.user.id)
+    auth.logout()
+    router.push('/')
+  } catch (e: unknown) {
+    deleteError.value = (e as { response?: { data?: { error?: string } } })
+      ?.response?.data?.error ?? 'Erreur lors de la suppression du compte'
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
 onMounted(loadFavorites)
 </script>
 
@@ -325,6 +346,45 @@ onMounted(loadFavorites)
             </button>
           </div>
         </template>
+      </section>
+
+      <!-- ── Zone de danger ── -->
+      <section class="profile-danger">
+        <h2 class="profile-section-title profile-section-title--danger">Zone de danger</h2>
+        
+        <div class="profile-danger__content">
+          <div class="profile-danger__info">
+            <h3 class="profile-danger__subtitle">Supprimer mon compte</h3>
+            <p class="profile-danger__text">
+              Cette action est irreversible. Toutes vos donnees (recettes, commentaires, favoris) seront definitivement supprimees.
+            </p>
+          </div>
+          <AppButton variant="ghost" size="sm" @click="showDeleteConfirm = true">
+            Supprimer mon compte
+          </AppButton>
+        </div>
+
+        <!-- Modale de confirmation -->
+        <Transition name="fade">
+          <div v-if="showDeleteConfirm" class="modal-overlay" @click="showDeleteConfirm = false">
+            <div class="modal-content" @click.stop>
+              <h3 class="modal-title">Confirmer la suppression</h3>
+              <p class="modal-text">
+                Etes-vous sur de vouloir supprimer definitivement votre compte ?
+                Cette action ne peut pas etre annulee.
+              </p>
+              <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
+              <div class="modal-actions">
+                <AppButton variant="ghost" :disabled="deleteLoading" @click="showDeleteConfirm = false">
+                  Annuler
+                </AppButton>
+                <AppButton variant="primary" :loading="deleteLoading" @click="deleteAccount">
+                  Supprimer mon compte
+                </AppButton>
+              </div>
+            </div>
+          </div>
+        </Transition>
       </section>
 
     </main>
@@ -645,6 +705,102 @@ onMounted(loadFavorites)
   transition: opacity var(--transition-base), transform var(--transition-base);
 }
 .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-12px); }
+
+/* ── Zone de danger ── */
+.profile-danger {
+  background: var(--color-surface);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+}
+
+.profile-section-title--danger {
+  color: var(--color-error);
+  border-bottom-color: var(--color-error);
+}
+
+.profile-danger__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.profile-danger__info { flex: 1; }
+
+.profile-danger__subtitle {
+  font-family: var(--font-heading);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-2);
+}
+
+.profile-danger__text {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  max-width: 480px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+}
+
+.modal-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-6);
+  line-height: var(--line-height-relaxed);
+}
+
+.modal-error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* Transition modal */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity var(--transition-base);
+}
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* Responsive */
 @media (max-width: 768px) {
