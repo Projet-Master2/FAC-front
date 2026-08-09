@@ -198,6 +198,26 @@ async function deleteComment(commentId: string) {
   } catch { /* silencieux */ }
 }
 
+// Suppression de recette
+const showDeleteConfirm = ref(false)
+const deleteLoading     = ref(false)
+const deleteError       = ref<string | null>(null)
+
+async function deleteRecipe() {
+  if (!recipe.value) return
+  deleteLoading.value = true
+  deleteError.value   = null
+  try {
+    await recipesApi.deleteRecipe(recipe.value.id)
+    router.push('/')
+  } catch (e: unknown) {
+    deleteError.value = (e as { response?: { data?: { error?: string } } })
+      ?.response?.data?.error ?? 'Erreur lors de la suppression'
+  } finally {
+    deleteLoading.value = false
+  }
+}
+
 onMounted(() => { loadRecipe() ; loadComments() })
 </script>
 
@@ -241,9 +261,14 @@ onMounted(() => { loadRecipe() ; loadComments() })
               <AppButton variant="ghost" size="sm" @click="router.push('/search')">
                 ← Retour
               </AppButton>
-              <AppButton v-if="isAuthor" variant="secondary" size="sm" @click="router.push(`/recipes/${recipe.id}/edit`)">
-                Modifier la recette
-              </AppButton>
+              <template v-if="isAuthor">
+                <AppButton variant="secondary" size="sm" @click="router.push(`/recipes/${recipe.id}/edit`)">
+                  Modifier
+                </AppButton>
+                <AppButton variant="ghost" size="sm" @click="showDeleteConfirm = true">
+                  Supprimer
+                </AppButton>
+              </template>
             </div>
           </div>
 
@@ -443,6 +468,28 @@ onMounted(() => { loadRecipe() ; loadComments() })
         </section>
 
       </main>
+
+      <!-- Modale de confirmation suppression -->
+      <Transition name="fade">
+        <div v-if="showDeleteConfirm" class="modal-overlay" @click="showDeleteConfirm = false">
+          <div class="modal-content" @click.stop>
+            <h3 class="modal-title">Supprimer cette recette ?</h3>
+            <p class="modal-text">
+              Cette action est irreversible. Toutes les donnees (ingredients, etapes, commentaires) seront definitivement supprimees.
+            </p>
+            <div v-if="deleteError" class="modal-error">{{ deleteError }}</div>
+            <div class="modal-actions">
+              <AppButton variant="ghost" :disabled="deleteLoading" @click="showDeleteConfirm = false">
+                Annuler
+              </AppButton>
+              <AppButton variant="primary" :loading="deleteLoading" @click="deleteRecipe">
+                Supprimer la recette
+              </AppButton>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
     </template>
   </div>
 </template>
@@ -612,6 +659,65 @@ onMounted(() => { loadRecipe() ; loadComments() })
 .pagination-btn { padding: var(--space-2) var(--space-4); border: 1.5px solid var(--color-border); border-radius: var(--radius-full); background: var(--color-surface); font-family: var(--font-heading); font-size: var(--text-sm); font-weight: var(--font-weight-medium); color: var(--color-text); cursor: pointer; transition: all var(--transition-fast); }
 .pagination-btn:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
 .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Modal suppression */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  max-width: 480px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+}
+
+.modal-text {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-6);
+  line-height: var(--line-height-relaxed);
+}
+
+.modal-error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-5);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity var(--transition-base);
+}
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 @media (max-width: 640px) {
   .recipe-hero { height: 220px; }
