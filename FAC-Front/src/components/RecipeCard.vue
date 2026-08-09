@@ -31,6 +31,16 @@ const avgRating = computed(() => {
   return r ? r.toFixed(1) : null
 })
 
+const likeCount = computed(() => {
+  const reactions = (props.recipe as RecipeSummary & { reactions?: Array<{ type: string }> }).reactions ?? []
+  return reactions.filter(reaction => reaction.type === 'LIKE').length
+})
+
+const loveCount = computed(() => {
+  const reactions = (props.recipe as RecipeSummary & { reactions?: Array<{ type: string }> }).reactions ?? []
+  return reactions.filter(reaction => reaction.type === 'LOVE').length
+})
+
 const coverImage = computed(() => props.recipe.media?.[0]?.url ?? null)
 
 const authorName = computed(
@@ -53,14 +63,31 @@ const authorName = computed(
         {{ difficulty.label }}
       </span>
 
-      <!-- Bouton favori -->
+      <div class="recipe-card__reaction-box">
+        <span class="recipe-card__reaction-pill" title="Pouces levés">
+          <span class="recipe-card__reaction-icon">👍</span>
+          <span>{{ likeCount }}</span>
+        </span>
+        <span class="recipe-card__reaction-pill" title="Cœurs">
+          <span class="recipe-card__reaction-icon">❤️</span>
+          <span>{{ loveCount }}</span>
+        </span>
+      </div>
+
       <button
         class="recipe-card__favorite"
         :class="{ 'recipe-card__favorite--active': isFavorite }"
         :aria-label="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
-        @click.prevent="emit('favorite', recipe.id)"
+        @click.prevent.stop="emit('favorite', recipe.id)"
       >
-        <span>{{ isFavorite ? '♥' : '♡' }}</span>
+        <!-- outlined -->
+        <svg v-if="!isFavorite" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        <!-- filled -->
+        <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
       </button>
     </div>
 
@@ -160,30 +187,62 @@ const authorName = computed(
   color: #fff;
 }
 
-/* Bouton favori */
-.recipe-card__favorite {
+/* Réactions + favori */
+.recipe-card__reaction-box {
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.9);
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.recipe-card__reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.92);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.recipe-card__reaction-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.recipe-card__favorite {
+  position: absolute;
+  top: calc(var(--space-3) + 32px);
+  left: var(--space-3);
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.95);
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  transition: transform var(--transition-fast), background var(--transition-fast);
-  color: var(--color-text-muted);
+  padding: 0;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+
+.recipe-card__favorite svg {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
 }
 
 .recipe-card__favorite:hover { transform: scale(1.15); }
 
 .recipe-card__favorite--active {
   color: var(--color-primary);
-  background: var(--color-primary-bg);
 }
 
 /* Corps */
