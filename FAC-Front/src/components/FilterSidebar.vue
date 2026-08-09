@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import type { RecipesQuery } from '@/api/recipes'
+import { tagsApi, type Tag } from '@/api/tags'
 
 interface Props {
   modelValue: RecipesQuery
@@ -10,7 +11,7 @@ defineProps<Props>()
 const emit = defineEmits<{ 'update:modelValue': [value: RecipesQuery] }>()
 
 // Sections depliables
-const openSections = ref({ difficulty: true, time: true, cost: true, sort: true })
+const openSections = ref({ difficulty: true, tags: true, time: true, cost: true, sort: true })
 
 function toggle(section: keyof typeof openSections.value) {
   openSections.value[section] = !openSections.value[section]
@@ -32,6 +33,30 @@ import { getCurrentInstance } from 'vue'
 function currentValue(): RecipesQuery {
   return getCurrentInstance()?.props.modelValue as RecipesQuery ?? {}
 }
+
+// Tags
+const tags = ref<Tag[]>([])
+const selectedTags = computed(() => {
+  const tagStr = currentValue().tags ?? ''
+  return tagStr ? tagStr.split(',') : []
+})
+
+function toggleTag(slug: string) {
+  const current = selectedTags.value
+  const newTags = current.includes(slug)
+    ? current.filter(t => t !== slug)
+    : [...current, slug]
+  update('tags', newTags.length > 0 ? newTags.join(',') : '')
+}
+
+async function loadTags() {
+  try {
+    const { data } = await tagsApi.getTags()
+    tags.value = data.data
+  } catch { /* silencieux */ }
+}
+
+onMounted(loadTags)
 </script>
 
 <template>
@@ -48,6 +73,26 @@ function currentValue(): RecipesQuery {
     <div class="filter-sidebar__header">
       <h2 class="filter-sidebar__title">Filtres</h2>
       <button class="filter-reset" @click="reset">Tout effacer</button>
+    </div>
+
+    <!-- Categories / Tags -->
+    <div class="filter-section">
+      <button class="filter-section__toggle" @click="toggle('tags')">
+        <span>Categories</span>
+        <span>{{ openSections.tags ? '▲' : '▼' }}</span>
+      </button>
+      <div v-if="openSections.tags" class="filter-section__body">
+        <label v-for="tag in tags" :key="tag.id" class="filter-checkbox">
+          <input
+            type="checkbox"
+            :checked="selectedTags.includes(tag.slug)"
+            @change="toggleTag(tag.slug)"
+          />
+          <span class="filter-checkbox__check" />
+          {{ tag.name }}
+        </label>
+        <p v-if="tags.length === 0" class="filter-empty">Aucune categorie disponible</p>
+      </div>
     </div>
 
     <!-- Difficulte -->
@@ -300,6 +345,55 @@ const sortOptions = [
 .filter-radio:has(input:checked) {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text);
+}
+
+/* Checkbox */
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.filter-checkbox input { display: none; }
+
+.filter-checkbox__check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.filter-checkbox input:checked + .filter-checkbox__check {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.filter-checkbox input:checked + .filter-checkbox__check::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.filter-checkbox:has(input:checked) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.filter-empty {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+  padding: var(--space-2) 0;
 }
 
 /* Section tri — radio natif visible à la place des dots */
