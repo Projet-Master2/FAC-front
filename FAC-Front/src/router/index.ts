@@ -5,6 +5,7 @@ import Login from '../views/Login.vue'
 import Profile from '../views/Profile.vue'
 import Search from '../views/Search.vue'
 import RecipeCreate from '../views/RecipeCreate.vue'
+import RecipeEdit from '../views/RecipeEdit.vue'
 import RecipeDetail from '../views/RecipeDetail.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
@@ -43,6 +44,12 @@ const router = createRouter({
       path: '/recipes/create',
       name: 'recipe-create',
       component: RecipeCreate,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/recipes/:id/edit',
+      name: 'recipe-edit',
+      component: RecipeEdit,
       meta: { requiresAuth: true },
     },
     {
