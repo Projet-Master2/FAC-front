@@ -27,10 +27,10 @@ async function loadRecipe() {
     form.value.title         = recipe.title
     form.value.description   = recipe.description
     form.value.difficulty    = recipe.difficulty
-    form.value.prepTime      = recipe.prepTime
-    form.value.cookTime      = recipe.cookTime || 0
-    form.value.servings      = recipe.servings || 1
-    form.value.estimatedCost = recipe.estimatedCost || 0
+    form.value.prepTime      = String(recipe.prepTime)
+    form.value.cookTime      = String(recipe.cookTime ?? 0)
+    form.value.servings      = String(recipe.servings ?? 1)
+    form.value.estimatedCost = String(recipe.estimatedCost ?? 0)
 
     // Image existante
     if (recipe.media?.[0]?.url) {
@@ -39,7 +39,7 @@ async function loadRecipe() {
 
     // Ingredients
     ingredients.value = recipe.ingredients.map(ri => ({
-      ingredient: { id: ri.ingredient.id, name: ri.ingredient.name },
+      ingredient: { id: ri.ingredient.id, name: ri.ingredient.name, iconName: ri.ingredient.iconName ?? null },
       quantity:   ri.quantity?.toString() ?? '',
       unit:       ri.unit ?? 'g',
     }))
@@ -62,10 +62,10 @@ const form = ref({
   title:         '',
   description:   '',
   difficulty:    'EASY' as Difficulty,
-  prepTime:      0,
-  cookTime:      0,
-  servings:      1,
-  estimatedCost: 0,
+  prepTime:      '',
+  cookTime:      '',
+  servings:      '',
+  estimatedCost: '',
 })
 
 const errors = ref({ title: '', description: '', prepTime: '', cookTime: '' })
@@ -136,8 +136,29 @@ const steps = ref([{ description: '' }])
 
 function addStep()           { steps.value.push({ description: '' }) }
 function removeStep(i: number) { if (steps.value.length > 1) steps.value.splice(i, 1) }
-function moveUp(i: number)   { if (i > 0) { const t = steps.value[i-1] ; steps.value[i-1] = steps.value[i] ; steps.value[i] = t } }
-function moveDown(i: number) { if (i < steps.value.length - 1) { const t = steps.value[i+1] ; steps.value[i+1] = steps.value[i] ; steps.value[i] = t } }
+function moveUp(i: number) {
+  if (i <= 0) return
+  const current = steps.value[i]
+  const previous = steps.value[i - 1]
+  if (!current || !previous) return
+  steps.value[i - 1] = current
+  steps.value[i] = previous
+}
+
+function moveDown(i: number) {
+  if (i >= steps.value.length - 1) return
+  const current = steps.value[i]
+  const next = steps.value[i + 1]
+  if (!current || !next) return
+  steps.value[i + 1] = current
+  steps.value[i] = next
+}
+
+function closeDropdownWithDelay() {
+  window.setTimeout(() => {
+    showDropdown.value = false
+  }, 150)
+}
 
 // ── Validation ────────────────────────────────────────────────────────────────
 function validate(): boolean {
@@ -145,7 +166,10 @@ function validate(): boolean {
   let ok = true
   if (!form.value.title.trim())       { errors.value.title       = 'Le nom est requis' ; ok = false }
   if (!form.value.description.trim()) { errors.value.description = 'La description est requise' ; ok = false }
-  if (!form.value.prepTime)           { errors.value.prepTime    = 'Le temps de preparation est requis' ; ok = false }
+  if (!form.value.prepTime || Number(form.value.prepTime) <= 0) {
+    errors.value.prepTime = 'Le temps de preparation est requis'
+    ok = false
+  }
   return ok
 }
 
@@ -200,8 +224,10 @@ async function submit() {
     // 4. Remplacer les étapes (similaire aux ingredients)
     const filledSteps = steps.value.filter(s => s.description.trim())
     for (let i = 0; i < filledSteps.length; i++) {
+      const step = filledSteps[i]
+      if (!step) continue
       try {
-        await recipesApi.addStep(id, { order: i, description: filledSteps[i].description.trim() })
+        await recipesApi.addStep(id, { order: i, description: step.description.trim() })
       } catch {
         // Peut-être déjà existant
       }
@@ -346,7 +372,7 @@ onMounted(loadRecipe)
                     :value="searchQuery"
                     placeholder="Ajouter un ingredient..."
                     @input="onSearchInput(($event.target as HTMLInputElement).value)"
-                    @blur="setTimeout(() => showDropdown = false, 150)"
+                    @blur="closeDropdownWithDelay"
                     @focus="showDropdown = searchResults.length > 0"
                   />
                   <!-- Dropdown -->
