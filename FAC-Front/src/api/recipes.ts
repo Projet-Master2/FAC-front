@@ -42,7 +42,7 @@ export interface RecipesQuery {
   maxTime?:    number
   maxCost?:    number
   tags?:       string
-  sort?:       'recent' | 'quickest' | 'cheapest'
+  sort?:       'recent' | 'quickest' | 'cheapest' | 'rating'
   page?:       number
   limit?:      number
 }
