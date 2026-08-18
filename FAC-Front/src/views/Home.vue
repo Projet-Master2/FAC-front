@@ -12,7 +12,15 @@
         <h2 class="home-hero__section-title">Top recettes du moment</h2>
 
         <div class="home-hero__cards">
-          <div v-for="recipe in topRated" :key="recipe.id" class="hero-card">
+          <div
+            v-for="recipe in topRated"
+            :key="recipe.id"
+            class="hero-card"
+            role="button"
+            tabindex="0"
+            @click="openRecipeDetail(recipe.id)"
+            @keydown.enter="openRecipeDetail(recipe.id)"
+          >
             <div class="hero-card__cover">
               <div class="hero-card__rank">{{ recipe.rank }}</div>
             </div>
@@ -45,6 +53,7 @@
             :key="recipe.id"
             :recipe="recipe"
             :is-favorite="false"
+            @click="openRecipeDetail(recipe.id)"
           />
         </div>
       </div>
@@ -58,6 +67,7 @@
             :key="recipe.id"
             :recipe="recipe"
             :is-favorite="false"
+            @click="openRecipeDetail(recipe.id)"
           />
         </div>
       </div>
@@ -71,6 +81,7 @@
             :key="recipe.id"
             :recipe="recipe"
             :is-favorite="false"
+            @click="openRecipeDetail(recipe.id)"
           />
         </div>
       </div>
@@ -86,21 +97,24 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import RecipeCard from '@/components/RecipeCard.vue'
 import { recipesApi, type RecipeSummary } from '@/api/recipes'
 
 defineOptions({ name: 'HomeView' })
+const router = useRouter()
 
 const loading = ref(true)
 const error = ref<string | null>(null)
 
+const topRecipes = ref<RecipeSummary[]>([])
 const mostViewed = ref<RecipeSummary[]>([])
 const mostRecent = ref<RecipeSummary[]>([])
 const cheapest = ref<RecipeSummary[]>([])
 
 const topRated = computed(() =>
-  mostViewed.value.slice(0, 3).map((recipe, index) => {
+  topRecipes.value.map((recipe, index) => {
     const totalTime = recipe.prepTime + recipe.cookTime
     const estimatedCost = recipe.estimatedCost == null
       ? 'N/A'
@@ -123,12 +137,14 @@ async function loadHomeRecipes() {
   error.value = null
 
   try {
-    const [popularRes, recentRes, cheapestRes] = await Promise.all([
-      recipesApi.getRecipes({ sort: 'rating', limit: 6 }),
-      recipesApi.getRecipes({ sort: 'recent', limit: 6 }),
-      recipesApi.getRecipes({ sort: 'cheapest', limit: 6 }),
+    const [topRatedRes, popularRes, recentRes, cheapestRes] = await Promise.all([
+      recipesApi.getRecipes({ sort: 'rating', limit: 3 }),
+      recipesApi.getRecipes({ sort: 'rating', limit: 3 }),
+      recipesApi.getRecipes({ sort: 'recent', limit: 3 }),
+      recipesApi.getRecipes({ sort: 'cheapest', limit: 3 }),
     ])
 
+    topRecipes.value = topRatedRes.data.data.recipes
     mostViewed.value = popularRes.data.data.recipes
     mostRecent.value = recentRes.data.data.recipes
     cheapest.value = cheapestRes.data.data.recipes
@@ -140,6 +156,10 @@ async function loadHomeRecipes() {
 }
 
 onMounted(loadHomeRecipes)
+
+function openRecipeDetail(recipeId: string) {
+  void router.push(`/recipes/${recipeId}`)
+}
 </script>
 
 <style scoped>
