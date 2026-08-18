@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useHead } from '@unhead/vue'
 import { useAuthStore } from '@/stores/auth'
 import { recipesApi, type RecipeDetail, type RecipeReactionType } from '@/api/recipes'
 import { commentsApi, type Comment } from '@/api/comments'
@@ -66,27 +65,7 @@ async function loadRecipe() {
 // Meta tags SEO dynamiques
 watch(recipe, (newRecipe) => {
   if (newRecipe) {
-    const description = newRecipe.description.slice(0, 160)
-    const imageUrl = newRecipe.media?.[0]?.url || 'https://fac.app/og-image.jpg'
-    const difficulty = difficultyMap[newRecipe.difficulty as keyof typeof difficultyMap]?.label || ''
-    const totalTime = newRecipe.prepTime + newRecipe.cookTime
-    
-    useHead({
-      title: `${newRecipe.title} - FAC`,
-      meta: [
-        { name: 'description', content: description },
-        { name: 'keywords', content: `recette ${newRecipe.title.toLowerCase()}, ${difficulty.toLowerCase()}, ${totalTime} min` },
-        // Open Graph
-        { property: 'og:title', content: `${newRecipe.title} - FAC` },
-        { property: 'og:description', content: description },
-        { property: 'og:image', content: imageUrl },
-        { property: 'og:type', content: 'article' },
-        // Twitter
-        { name: 'twitter:title', content: `${newRecipe.title} - FAC` },
-        { name: 'twitter:description', content: description },
-        { name: 'twitter:image', content: imageUrl },
-      ],
-    })
+    document.title = `${newRecipe.title} - FAC`
   }
 })
 
@@ -195,6 +174,10 @@ async function loadComments() {
     comments.value           = data.data.comments
     commentsTotal.value      = data.data.total
     commentsTotalPages.value = data.data.totalPages
+  } catch {
+    comments.value           = []
+    commentsTotal.value      = 0
+    commentsTotalPages.value = 1
   } finally {
     commentsLoading.value = false
   }

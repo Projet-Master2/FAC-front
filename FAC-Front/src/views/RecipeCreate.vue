@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { recipesApi, type CreateRecipePayload } from '@/api/recipes'
 import { ingredientsApi, type Ingredient } from '@/api/ingredients'
@@ -131,8 +131,6 @@ function validate(): boolean {
 // ── Soumission ────────────────────────────────────────────────────────────────
 const submitting  = ref(false)
 const submitError = ref<string | null>(null)
-
-const hasFilledSteps = computed(() => steps.value.some(s => s.description.trim()))
 
 async function submit() {
   if (!validate()) return
