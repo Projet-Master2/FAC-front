@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { usersApi, type UpdateUserPayload } from '@/api/users'
-import type { RecipeSummary } from '@/api/recipes'
+import { recipesApi, type RecipeSummary } from '@/api/recipes'
 import Navbar from '@/components/Navbar.vue'
 import RecipeCard from '@/components/RecipeCard.vue'
 import AppInput from '@/components/AppInput.vue'
@@ -41,7 +41,6 @@ async function loadFavorites() {
 }
 
 async function removeFavorite(id: string) {
-  const { recipesApi } = await import('@/api/recipes')
   await recipesApi.removeFavorite(id)
   favorites.value = favorites.value.filter(r => r.id !== id)
   if (favPage.value > totalFavPages.value && favPage.value > 1) favPage.value--

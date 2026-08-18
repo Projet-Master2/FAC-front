@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { recipesApi, type RecipeDetail, type Difficulty } from '@/api/recipes'
 import { ingredientsApi, type Ingredient } from '@/api/ingredients'

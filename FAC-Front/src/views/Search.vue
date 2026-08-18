@@ -3,6 +3,7 @@ import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { recipesApi, type RecipeSummary, type RecipesQuery } from '@/api/recipes'
+import { usersApi } from '@/api/users'
 import Navbar from '@/components/Navbar.vue'
 import RecipeCard from '@/components/RecipeCard.vue'
 import FilterSidebar from '@/components/FilterSidebar.vue'
@@ -67,7 +68,7 @@ async function fetchRecipes() {
 async function loadFavorites() {
   if (!auth.user) return
   try {
-    const { data } = await import('@/api/users').then(m => m.usersApi.getFavorites(auth.user!.id))
+    const { data } = await usersApi.getFavorites(auth.user.id)
     favorites.value = new Set(data.data.map((r: RecipeSummary) => r.id))
   } catch { /* silencieux */ }
 }
