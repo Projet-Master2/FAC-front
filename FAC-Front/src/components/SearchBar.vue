@@ -5,21 +5,15 @@ interface Props {
   modelValue: RecipesQuery
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<{ 'update:modelValue': [value: RecipesQuery] }>()
 
 function update(field: keyof RecipesQuery, value: string | number | undefined) {
-  emit('update:modelValue', { ...useModelValue(), [field]: value || undefined })
+  emit('update:modelValue', { ...props.modelValue, [field]: value || undefined })
 }
 
 function reset() {
   emit('update:modelValue', { q: '' })
-}
-
-// Helper pour acceder au modelValue dans le setup
-import { getCurrentInstance } from 'vue'
-function useModelValue(): RecipesQuery {
-  return getCurrentInstance()?.props.modelValue as RecipesQuery ?? {}
 }
 </script>
 

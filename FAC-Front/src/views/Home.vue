@@ -12,7 +12,15 @@
         <h2 class="home-hero__section-title">Top recettes du moment</h2>
 
         <div class="home-hero__cards">
-          <div v-for="recipe in topRated" :key="recipe.id" class="hero-card">
+          <div
+            v-for="recipe in topRated"
+            :key="recipe.id"
+            class="hero-card"
+            role="button"
+            tabindex="0"
+            @click="openRecipeDetail(recipe.id)"
+            @keydown.enter="openRecipeDetail(recipe.id)"
+          >
             <div class="hero-card__cover">
               <div class="hero-card__rank">{{ recipe.rank }}</div>
             </div>
@@ -33,6 +41,9 @@
     <!-- Grille 3 colonnes -->
     <main class="home-columns container">
 
+      <section v-if="loading" class="home-info">Chargement des recettes...</section>
+      <section v-else-if="error" class="home-info home-info--error">{{ error }}</section>
+
       <!-- Les plus vues -->
       <div class="home-col">
         <h2 class="home-col__title">Les plus vues</h2>
@@ -42,6 +53,7 @@
             :key="recipe.id"
             :recipe="recipe"
             :is-favorite="false"
+            @click="openRecipeDetail(recipe.id)"
           />
         </div>
       </div>
@@ -55,6 +67,7 @@
             :key="recipe.id"
             :recipe="recipe"
             :is-favorite="false"
+            @click="openRecipeDetail(recipe.id)"
           />
         </div>
       </div>
@@ -68,6 +81,7 @@
             :key="recipe.id"
             :recipe="recipe"
             :is-favorite="false"
+            @click="openRecipeDetail(recipe.id)"
           />
         </div>
       </div>
@@ -82,55 +96,70 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import RecipeCard from '@/components/RecipeCard.vue'
-import type { RecipeSummary } from '@/api/recipes'
+import { recipesApi, type RecipeSummary } from '@/api/recipes'
 
 defineOptions({ name: 'HomeView' })
+const router = useRouter()
 
-// Placeholder pour le top rated dans le hero
-const topRated = [
-  { id: 'h1', rank: '#1', title: 'Pates a la carbonara', description: 'Le grand classique italien, cremeux et savoureux, pret en 20 minutes.', time: '20 min', cost: '2.50 €/pers', rating: '★ 4.9' },
-  { id: 'h2', rank: '#2', title: 'Riz saute aux legumes', description: 'Un wok colore et equilibre avec ce que vous avez dans le frigo.', time: '15 min', cost: '1.80 €/pers', rating: '★ 4.7' },
-  { id: 'h3', rank: '#3', title: 'Omelette au fromage', description: 'Rapide, proteinee et personnalisable a souhait pour le diner.', time: '10 min', cost: '1.20 €/pers', rating: '★ 4.6' },
-]
+const loading = ref(true)
+const error = ref<string | null>(null)
 
-// Mock recipes pour les 3 colonnes
-function mockRecipe(overrides: Partial<RecipeSummary> & { id: string; title: string; description: string }): RecipeSummary {
-  return {
-    id: overrides.id,
-    title: overrides.title,
-    description: overrides.description,
-    difficulty: overrides.difficulty ?? 'EASY',
-    prepTime: overrides.prepTime ?? 10,
-    cookTime: overrides.cookTime ?? 15,
-    servings: 2,
-    estimatedCost: overrides.estimatedCost ?? 3,
-    createdAt: new Date().toISOString(),
-    author: { id: '1', name: 'Alice Martin', pseudo: 'alice_cook', avatar: null },
-    tags: [],
-    media: [],
-    _count: { ratings: overrides._count?.ratings ?? 12, comments: overrides._count?.comments ?? 3, favorites: overrides._count?.favorites ?? 5 },
+const topRecipes = ref<RecipeSummary[]>([])
+const mostViewed = ref<RecipeSummary[]>([])
+const mostRecent = ref<RecipeSummary[]>([])
+const cheapest = ref<RecipeSummary[]>([])
+
+const topRated = computed(() =>
+  topRecipes.value.map((recipe, index) => {
+    const totalTime = recipe.prepTime + recipe.cookTime
+    const estimatedCost = recipe.estimatedCost == null
+      ? 'N/A'
+      : `${recipe.estimatedCost.toFixed(2)} €/pers`
+
+    return {
+      id: recipe.id,
+      rank: `#${index + 1}`,
+      title: recipe.title,
+      description: recipe.description,
+      time: `${totalTime} min`,
+      cost: estimatedCost,
+      rating: `★ ${recipe._count.ratings}`,
+    }
+  })
+)
+
+async function loadHomeRecipes() {
+  loading.value = true
+  error.value = null
+
+  try {
+    const [topRatedRes, popularRes, recentRes, cheapestRes] = await Promise.all([
+      recipesApi.getRecipes({ sort: 'rating', limit: 3 }),
+      recipesApi.getRecipes({ sort: 'rating', limit: 3 }),
+      recipesApi.getRecipes({ sort: 'recent', limit: 3 }),
+      recipesApi.getRecipes({ sort: 'cheapest', limit: 3 }),
+    ])
+
+    topRecipes.value = topRatedRes.data.data.recipes
+    mostViewed.value = popularRes.data.data.recipes
+    mostRecent.value = recentRes.data.data.recipes
+    cheapest.value = cheapestRes.data.data.recipes
+  } catch {
+    error.value = 'Impossible de charger les recettes pour le moment.'
+  } finally {
+    loading.value = false
   }
 }
 
-const mostViewed: RecipeSummary[] = [
-  mockRecipe({ id: 'v1', title: 'Soupe de lentilles', description: 'Chaleureuse et nourrissante, parfaite pour les soirs d hiver.', difficulty: 'EASY', prepTime: 10, cookTime: 25, estimatedCost: 1.50 }),
-  mockRecipe({ id: 'v2', title: 'Salade nicoise', description: 'Fraiche et coloree, un classique du sud de la France.', difficulty: 'EASY', prepTime: 15, cookTime: 0, estimatedCost: 4 }),
-  mockRecipe({ id: 'v3', title: 'Gratin dauphinois', description: 'Fondant et croustillant, le confort food par excellence.', difficulty: 'MEDIUM', prepTime: 20, cookTime: 60, estimatedCost: 3 }),
-]
+onMounted(loadHomeRecipes)
 
-const mostRecent: RecipeSummary[] = [
-  mockRecipe({ id: 'r1', title: 'Wrap au poulet', description: 'Pratique et equilibre, ideal pour le dejeuner entre les cours.', difficulty: 'EASY', prepTime: 10, cookTime: 5, estimatedCost: 3.50 }),
-  mockRecipe({ id: 'r2', title: 'Curry de pois chiches', description: 'Epice et vegetal, un voyage en Inde sans quitter sa cuisine.', difficulty: 'EASY', prepTime: 10, cookTime: 20, estimatedCost: 2 }),
-  mockRecipe({ id: 'r3', title: 'Tarte aux pommes', description: 'Un dessert maison simple que tout le monde adore.', difficulty: 'MEDIUM', prepTime: 20, cookTime: 35, estimatedCost: 2.50 }),
-]
-
-const cheapest: RecipeSummary[] = [
-  mockRecipe({ id: 'c1', title: 'Pates a la tomate', description: 'Le repas etudiant par essence, savoureux et ultra rapide.', difficulty: 'EASY', prepTime: 5, cookTime: 10, estimatedCost: 0.80 }),
-  mockRecipe({ id: 'c2', title: 'Pain perdu', description: 'Un dessert anti-gaspi delicieux avec du pain rassis.', difficulty: 'EASY', prepTime: 5, cookTime: 5, estimatedCost: 0.60 }),
-  mockRecipe({ id: 'c3', title: 'Gaspacho maison', description: 'Soupe froide espagnole, riche en legumes et zero cuisson.', difficulty: 'EASY', prepTime: 15, cookTime: 0, estimatedCost: 1.20 }),
-]
+function openRecipeDetail(recipeId: string) {
+  void router.push(`/recipes/${recipeId}`)
+}
 </script>
 
 <style scoped>
@@ -256,6 +285,20 @@ const cheapest: RecipeSummary[] = [
   padding-top: var(--space-12);
   padding-bottom: var(--space-16);
   flex: 1;
+}
+
+.home-info {
+  grid-column: 1 / -1;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.home-info--error {
+  color: var(--color-error);
+  border-color: var(--color-error);
 }
 
 .home-col__title {

@@ -9,12 +9,6 @@ import RecipeEdit from '../views/RecipeEdit.vue'
 import RecipeDetail from '../views/RecipeDetail.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
-// Routes qui nécessitent d'être connecté
-const authRequiredRoutes = ['home']
-
-// Routes accessibles uniquement sans session (redirection si déjà connecté)
-const guestOnlyRoutes = ['login']
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -70,7 +64,11 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
   if (auth.accessToken && !auth.user) {
-    await auth.fetchMe()
+    try {
+      await auth.fetchMe()
+    } catch {
+      // Le store gère déjà le nettoyage des tokens si nécessaire.
+    }
   }
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
