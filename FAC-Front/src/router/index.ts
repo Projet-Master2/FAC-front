@@ -2,8 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
-import Search from '../views/Search.vue'
 import Profile from '../views/Profile.vue'
+import Search from '../views/Search.vue'
+import RecipeCreate from '../views/RecipeCreate.vue'
+import RecipeEdit from '../views/RecipeEdit.vue'
+import RecipeDetail from '../views/RecipeDetail.vue'
 // import LoginMockup from '../views/LoginMockup.vue' // Mockup — décommenter si besoin
 
 const router = createRouter({
@@ -21,19 +24,32 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
-      path: '/search',
-      name: 'search',
-      component: Search,
-    },
-    {
       path: '/profile',
       name: 'profile',
       component: Profile,
       meta: { requiresAuth: true },
     },
     {
-      path: '/:pathMatch(.*)*',
-      redirect: '/',
+      path: '/search',
+      name: 'search',
+      component: Search,
+    },
+    {
+      path: '/recipes/create',
+      name: 'recipe-create',
+      component: RecipeCreate,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/recipes/:id/edit',
+      name: 'recipe-edit',
+      component: RecipeEdit,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/recipes/:id',
+      name: 'recipe-detail',
+      component: RecipeDetail,
     },
     // Route mockup — décommenter pour réactiver (/mockup/login)
     // {

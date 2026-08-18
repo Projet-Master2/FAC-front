@@ -1,0 +1,147 @@
+name: CI Front - Development
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - src/**
+      - public/**
+      - index.html
+      - package.json
+      - package-lock.json
+      - vite.config.ts
+      - tsconfig*.json
+      - env.d.ts
+      - eslint.config.ts
+      - .github/workflows/ci-front-*.yml
+
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - src/**
+      - public/**
+      - index.html
+      - package.json
+      - package-lock.json
+      - vite.config.ts
+      - tsconfig*.json
+      - env.d.ts
+      - eslint.config.ts
+      - .github/workflows/ci-front-*.yml
+
+concurrency:
+  group: ci-front-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-build:
+    name: Quality, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # 1. Récupération du code source
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Installation de Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # 3. Installation des dépendances
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Analyse statique
+      - name: Run ESLint
+        run: npx eslint . --max-warnings=0
+
+      # 5. Vérification TypeScript et des composants Vue
+      - name: Run type checking
+        run: npm run type-check
+
+      # 6. Exécution des tests unitaires Vitest
+      - name: Run unit tests
+        run: npm run test:unit -- --run
+
+      # 7. Compilation de production
+      - name: Build application
+        run: npm run build
+
+  deploy-development:
+    name: Deploy to Vercel Development
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    needs: quality-and-build
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    environment:
+      name: development
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull Vercel configuration
+        run: >
+          npx vercel@latest pull
+          --yes
+          --environment=preview
+          --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel application
+        run: >
+          npx vercel@latest build
+          --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(npx vercel@latest deploy \
+            --prebuilt \
+            --token=${{ secrets.VERCEL_TOKEN }})
+
+          echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployment URL: $DEPLOYMENT_URL"
+
+      - name: Check deployed application
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --retry 5 \
+            --retry-delay 5 \
+            "${{ steps.deploy.outputs.url }}"
+
+      - name: Deployment summary
+        run: |
+          echo "## Front-End development deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployment completed successfully." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
