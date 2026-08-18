@@ -17,10 +17,10 @@ const form = ref({
   title:         '',
   description:   '',
   difficulty:    'EASY' as Difficulty,
-  prepTime:      '' as unknown as number,
-  cookTime:      '' as unknown as number,
-  servings:      '' as unknown as number,
-  estimatedCost: '' as unknown as number,
+  prepTime:      '',
+  cookTime:      '',
+  servings:      '',
+  estimatedCost: '',
 })
 
 const errors = ref({ title: '', description: '', prepTime: '', cookTime: '' })
@@ -91,8 +91,29 @@ const steps = ref([{ description: '' }])
 
 function addStep()           { steps.value.push({ description: '' }) }
 function removeStep(i: number) { if (steps.value.length > 1) steps.value.splice(i, 1) }
-function moveUp(i: number)   { if (i > 0) { const t = steps.value[i-1] ; steps.value[i-1] = steps.value[i] ; steps.value[i] = t } }
-function moveDown(i: number) { if (i < steps.value.length - 1) { const t = steps.value[i+1] ; steps.value[i+1] = steps.value[i] ; steps.value[i] = t } }
+function moveUp(i: number) {
+  if (i <= 0) return
+  const current = steps.value[i]
+  const previous = steps.value[i - 1]
+  if (!current || !previous) return
+  steps.value[i - 1] = current
+  steps.value[i] = previous
+}
+
+function moveDown(i: number) {
+  if (i >= steps.value.length - 1) return
+  const current = steps.value[i]
+  const next = steps.value[i + 1]
+  if (!current || !next) return
+  steps.value[i + 1] = current
+  steps.value[i] = next
+}
+
+function closeDropdownWithDelay() {
+  window.setTimeout(() => {
+    showDropdown.value = false
+  }, 150)
+}
 
 // ── Validation ────────────────────────────────────────────────────────────────
 function validate(): boolean {
@@ -100,7 +121,10 @@ function validate(): boolean {
   let ok = true
   if (!form.value.title.trim())       { errors.value.title       = 'Le nom est requis' ; ok = false }
   if (!form.value.description.trim()) { errors.value.description = 'La description est requise' ; ok = false }
-  if (!form.value.prepTime)           { errors.value.prepTime    = 'Le temps de preparation est requis' ; ok = false }
+  if (!form.value.prepTime || Number(form.value.prepTime) <= 0) {
+    errors.value.prepTime = 'Le temps de preparation est requis'
+    ok = false
+  }
   return ok
 }
 
@@ -146,7 +170,9 @@ async function submit() {
     // 4. Ajouter les etapes
     const filledSteps = steps.value.filter(s => s.description.trim())
     for (let i = 0; i < filledSteps.length; i++) {
-      await recipesApi.addStep(recipeId, { order: i, description: filledSteps[i].description.trim() })
+      const step = filledSteps[i]
+      if (!step) continue
+      await recipesApi.addStep(recipeId, { order: i, description: step.description.trim() })
     }
 
     // 5. Publier
@@ -276,7 +302,7 @@ async function submit() {
                   :value="searchQuery"
                   placeholder="Chercher ou creer un ingredient..."
                   @input="onSearchInput(($event.target as HTMLInputElement).value)"
-                  @blur="setTimeout(() => showDropdown = false, 150)"
+                  @blur="closeDropdownWithDelay"
                   @focus="showDropdown = searchResults.length > 0"
                 />
                 <!-- Dropdown -->
