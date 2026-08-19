@@ -15,6 +15,7 @@ on:
       - FAC-Front/env.d.ts
       - FAC-Front/eslint.config.ts
       - FAC-Front/.github/workflows/ci-front-*.yml
+      - FAC-Front/vercel.json
 
   pull_request:
     branches:
@@ -30,6 +31,7 @@ on:
       - FAC-Front/env.d.ts
       - FAC-Front/eslint.config.ts
       - FAC-Front/.github/workflows/ci-front-*.yml
+      - FAC-Front/vercel.json
 
 concurrency:
   group: ci-front-dev-${{ github.ref }}
