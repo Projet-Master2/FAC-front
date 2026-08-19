@@ -5,31 +5,31 @@ on:
     branches:
       - develop
     paths:
-      - src/**
-      - public/**
-      - index.html
-      - package.json
-      - package-lock.json
-      - vite.config.ts
-      - tsconfig*.json
-      - env.d.ts
-      - eslint.config.ts
-      - .github/workflows/ci-front-*.yml
+      - FAC-Front/src/**
+      - FAC-Front/public/**
+      - FAC-Front/index.html
+      - FAC-Front/package.json
+      - FAC-Front/package-lock.json
+      - FAC-Front/vite.config.ts
+      - FAC-Front/tsconfig*.json
+      - FAC-Front/env.d.ts
+      - FAC-Front/eslint.config.ts
+      - FAC-Front/.github/workflows/ci-front-*.yml
 
   pull_request:
     branches:
       - develop
     paths:
-      - src/**
-      - public/**
-      - index.html
-      - package.json
-      - package-lock.json
-      - vite.config.ts
-      - tsconfig*.json
-      - env.d.ts
-      - eslint.config.ts
-      - .github/workflows/ci-front-*.yml
+      - FAC-Front/src/**
+      - FAC-Front/public/**
+      - FAC-Front/index.html
+      - FAC-Front/package.json
+      - FAC-Front/package-lock.json
+      - FAC-Front/vite.config.ts
+      - FAC-Front/tsconfig*.json
+      - FAC-Front/env.d.ts
+      - FAC-Front/eslint.config.ts
+      - FAC-Front/.github/workflows/ci-front-*.yml
 
 concurrency:
   group: ci-front-dev-${{ github.ref }}
@@ -44,6 +44,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    defaults:
+      run:
+        working-directory: FAC-Front
+
     steps:
       # 1. Récupération du code source
       - name: Checkout repository
@@ -55,6 +59,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+          cache-dependency-path: FAC-Front/package-lock.json
 
       # 3. Installation des dépendances
       - name: Install dependencies
@@ -91,6 +96,7 @@ jobs:
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -101,28 +107,51 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+          cache-dependency-path: FAC-Front/package-lock.json
 
       - name: Install dependencies
+        working-directory: FAC-Front
         run: npm ci
+
+      - name: Validate deployment environment
+        run: |
+          if [ -z "$VERCEL_ORG_ID" ]; then
+            echo "::error::VERCEL_ORG_ID is not available"
+            exit 1
+          fi
+
+          if [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::VERCEL_PROJECT_ID is not available"
+            exit 1
+          fi
+
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN is not available"
+            exit 1
+          fi
 
       - name: Pull Vercel configuration
         run: >
           npx vercel@latest pull
           --yes
           --environment=preview
-          --token=${{ secrets.VERCEL_TOKEN }}
+          --git-branch=develop
+          --token="$VERCEL_TOKEN"
 
       - name: Build Vercel application
         run: >
           npx vercel@latest build
-          --token=${{ secrets.VERCEL_TOKEN }}
+          --token="$VERCEL_TOKEN"
 
       - name: Deploy to Vercel
         id: deploy
         run: |
-          DEPLOYMENT_URL=$(npx vercel@latest deploy \
-            --prebuilt \
-            --token=${{ secrets.VERCEL_TOKEN }})
+          DEPLOYMENT_URL="$(
+            npx vercel@latest deploy \
+              --prebuilt \
+              --yes \
+              --token="$VERCEL_TOKEN"
+          )"
 
           echo "url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
           echo "Deployment URL: $DEPLOYMENT_URL"
