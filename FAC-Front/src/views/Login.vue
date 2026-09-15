@@ -1,358 +1,348 @@
-<template>
-  <div class="login-container">
-    <div class="login-card">
-      <!-- Menu de sélection -->
-      <div class="form-tabs">
-        <button 
-          type="button"
-          :class="['tab-button', { active: activeForm === 'login' }]"
-          @click="activeForm = 'login'"
-        >
-          Connexion
-        </button>
-        <button 
-          type="button"
-          :class="['tab-button', { active: activeForm === 'signup' }]"
-          @click="activeForm = 'signup'"
-        >
-          Inscription
-        </button>
-      </div>
+﻿<template>
+  <div class="login-page">
 
-      <!-- Formulaire de connexion -->
-      <form v-if="activeForm === 'login'" @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="login-email">Email</label>
-          <input 
-            type="email" 
-            id="login-email" 
-            v-model="loginData.email" 
-            placeholder="Entrez votre email"
-            required
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="login-password">Mot de passe</label>
-          <input 
-            type="password" 
-            id="login-password" 
-            v-model="loginData.password" 
-            placeholder="Entrez votre mot de passe"
-            required
-          />
-        </div>
-        
-        <div class="checkbox-group">
-          <input 
-            type="checkbox" 
-            id="stay-connected" 
-            v-model="loginData.stayConnected"
-          />
-          <label for="stay-connected">Rester connecté</label>
-        </div>
-        
-        <button type="submit" class="btn-submit">Se connecter</button>
-        
-        <div class="form-footer">
-          <a href="#" class="link">Mot de passe oublié ?</a>
-        </div>
-      </form>
+    <!-- Fond slideshow -->
+    <ImageSlideshow :images="slides" :interval="7000" />
 
-      <!-- Formulaire d'inscription -->
-      <div v-else>
-        <!-- Étape 1: Informations obligatoires -->
-        <form v-if="signupStep === 1" @submit.prevent="handleSignup" class="login-form">
-          <div class="form-group">
-            <label for="signup-name">Nom complet</label>
-            <input 
-              type="text" 
-              id="signup-name" 
-              v-model="signupData.name" 
-              placeholder="Entrez votre nom"
+    <!-- Card -->
+    <div class="login-card-wrapper">
+      <div class="login-card">
+
+        <div class="login-card__top" />
+
+        <div class="login-card__body">
+
+          <!-- Logo -->
+          <div class="login-card__logo">
+            <span class="login-card__logo-text">FAC</span>
+          </div>
+
+          <!-- Onglets -->
+          <div class="login-tabs" role="tablist">
+            <button
+              role="tab"
+              :aria-selected="activeTab === 'login'"
+              :class="['login-tabs__tab', { 'login-tabs__tab--active': activeTab === 'login' }]"
+              @click="switchTab('login')"
+            >
+              Connexion
+            </button>
+            <button
+              role="tab"
+              :aria-selected="activeTab === 'register'"
+              :class="['login-tabs__tab', { 'login-tabs__tab--active': activeTab === 'register' }]"
+              @click="switchTab('register')"
+            >
+              Inscription
+            </button>
+          </div>
+
+          <!-- Erreur globale API -->
+          <div v-if="auth.error" class="login-card__error" role="alert">
+            {{ auth.error }}
+          </div>
+
+          <!-- Formulaire connexion -->
+          <form v-if="activeTab === 'login'" class="login-form" @submit.prevent="handleLogin" novalidate>
+            <AppInput
+              v-model="loginForm.email"
+              label="Email"
+              type="email"
+              placeholder="votre@email.com"
+              :error="loginErrors.email"
               required
             />
-          </div>
-          
-          <div class="form-group">
-            <label for="signup-email">Email</label>
-            <input 
-              type="email" 
-              id="signup-email" 
-              v-model="signupData.email" 
-              placeholder="Entrez votre email"
+            <AppInput
+              v-model="loginForm.password"
+              label="Mot de passe"
+              type="password"
+              placeholder="Entrez votre mot de passe"
+              :error="loginErrors.password"
               required
             />
-          </div>
-          
-          <div class="form-group">
-            <label for="signup-password">Mot de passe</label>
-            <input 
-              type="password" 
-              id="signup-password" 
-              v-model="signupData.password" 
-              placeholder="Créez un mot de passe"
+            <div class="login-form__forgot">
+              <router-link to="/forgot-password" class="login-form__link">
+                Mot de passe oublié ?
+              </router-link>
+            </div>
+            <AppButton type="submit" :loading="auth.isLoading" full-width size="lg">
+              Se connecter
+            </AppButton>
+          </form>
+
+          <!-- Formulaire inscription -->
+          <form v-else class="login-form" @submit.prevent="handleRegister" novalidate>
+            <AppInput
+              v-model="registerForm.name"
+              label="Nom complet"
+              placeholder="Votre prénom et nom"
+              :error="registerErrors.name"
               required
-              minlength="6"
             />
-          </div>
-          
-          <div class="form-group">
-            <label for="signup-confirm">Confirmer le mot de passe</label>
-            <input 
-              type="password" 
-              id="signup-confirm" 
-              v-model="signupData.confirmPassword" 
+            <AppInput
+              v-model="registerForm.pseudo"
+              label="Pseudo"
+              placeholder="Visible par les autres (optionnel)"
+              :error="registerErrors.pseudo"
+            />
+            <AppInput
+              v-model="registerForm.email"
+              label="Email"
+              type="email"
+              placeholder="votre@email.com"
+              :error="registerErrors.email"
+              required
+            />
+            <AppInput
+              v-model="registerForm.password"
+              label="Mot de passe"
+              type="password"
+              placeholder="Minimum 8 caractères"
+              :error="registerErrors.password"
+              required
+            />
+            <AppInput
+              v-model="registerForm.confirmPassword"
+              label="Confirmer le mot de passe"
+              type="password"
               placeholder="Confirmez votre mot de passe"
+              :error="registerErrors.confirmPassword"
               required
-              minlength="6"
             />
-          </div>
-          
-          <button type="submit" class="btn-submit">S'inscrire</button>
-          
-          <div class="form-footer">
-            <a 
-              href="#" 
-              class="link" 
-              @click.prevent="signupStep = 2"
-            >
-              Informations optionnelles
-            </a>
-          </div>
-        </form>
+            <AppButton type="submit" :loading="auth.isLoading" full-width size="lg">
+              Créer mon compte
+            </AppButton>
+          </form>
 
-        <!-- Étape 2: Informations optionnelles -->
-        <div v-else class="login-form">
-          <div class="form-group">
-            <label for="signup-pseudo">Pseudo (optionnel)</label>
-            <input 
-              type="text" 
-              id="signup-pseudo" 
-              v-model="signupData.pseudo" 
-              placeholder="Choisissez un pseudo"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="signup-age">Âge (optionnel)</label>
-            <input 
-              type="number" 
-              id="signup-age" 
-              v-model="signupData.age" 
-              placeholder="Votre âge"
-              min="1"
-              max="120"
-            />
-          </div>
-          
-          <div class="form-footer">
-            <a 
-              href="#" 
-              class="link" 
-              @click.prevent="signupStep = 1"
-            >
-              ← Retour
-            </a>
-          </div>
+          <!-- Switch bas de card -->
+          <p class="login-card__switch">
+            <template v-if="activeTab === 'login'">
+              Pas encore de compte ?
+              <button class="login-card__switch-btn" @click="switchTab('register')">S'inscrire</button>
+            </template>
+            <template v-else>
+              Déjà un compte ?
+              <button class="login-card__switch-btn" @click="switchTab('login')">Se connecter</button>
+            </template>
+          </p>
+
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import AppInput from '@/components/AppInput.vue'
+import AppButton from '@/components/AppButton.vue'
+import ImageSlideshow from '@/components/ImageSlideshow.vue'
 
-defineOptions({
-  name: 'LoginView'
-})
+defineOptions({ name: 'LoginView' })
 
-const activeForm = ref<'login' | 'signup'>('login')
-const signupStep = ref(1)
+const router = useRouter()
+const route  = useRoute()
+const auth   = useAuthStore()
 
-const loginData = ref({
-  email: '',
-  password: '',
-  stayConnected: false
-})
+// â”€â”€ Onglet actif â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const activeTab = ref<'login' | 'register'>('login')
 
-const signupData = ref({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-  pseudo: '',
-  age: null as number | null
-})
+// â”€â”€ Formulaire connexion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const loginForm   = ref({ email: '', password: '' })
+const loginErrors = ref({ email: '', password: '' })
 
-const handleLogin = () => {
-  console.log('Login attempt:', loginData.value)
-  // TODO: Implémenter la logique de connexion
+function validateLogin(): boolean {
+  loginErrors.value = { email: '', password: '' }
+  let ok = true
+  if (!loginForm.value.email)    { loginErrors.value.email    = "L'email est requis" ; ok = false }
+  if (!loginForm.value.password) { loginErrors.value.password = 'Le mot de passe est requis' ; ok = false }
+  return ok
 }
 
-const handleSignup = () => {
-  if (signupData.value.password !== signupData.value.confirmPassword) {
-    alert('Les mots de passe ne correspondent pas')
-    return
+async function handleLogin() {
+  if (!validateLogin()) return
+  try {
+    await auth.login(loginForm.value)
+    const redirect = route.query.redirect as string | undefined
+    router.push(redirect ?? '/')
+  } catch { /* erreur affichée via auth.error */ }
+}
+
+// â”€â”€ Formulaire inscription â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const registerForm = ref({
+  name: '', email: '', password: '', confirmPassword: '', pseudo: '',
+})
+const registerErrors = ref({
+  name: '', email: '', password: '', confirmPassword: '', pseudo: '',
+})
+
+function validateRegister(): boolean {
+  registerErrors.value = { name: '', email: '', password: '', confirmPassword: '', pseudo: '' }
+  let ok = true
+  if (!registerForm.value.name.trim())               { registerErrors.value.name            = 'Le nom est requis' ; ok = false }
+  if (!registerForm.value.email)                     { registerErrors.value.email           = "L'email est requis" ; ok = false }
+  if (registerForm.value.password.length < 8)        { registerErrors.value.password        = 'Minimum 8 caractères' ; ok = false }
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    registerErrors.value.confirmPassword = 'Les mots de passe ne correspondent pas'
+    ok = false
   }
-  console.log('Signup attempt:', signupData.value)
-  // TODO: Implémenter la logique d'inscription
+  return ok
 }
+
+async function handleRegister() {
+  if (!validateRegister()) return
+  try {
+    await auth.register({
+      name:     registerForm.value.name,
+      email:    registerForm.value.email,
+      password: registerForm.value.password,
+      pseudo:   registerForm.value.pseudo || undefined,
+    })
+    router.push('/')
+  } catch { /* erreur affichée via auth.error */ }
+}
+
+// â”€â”€ Nettoyage erreurs au changement d'onglet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function switchTab(tab: 'login' | 'register') {
+  activeTab.value = tab
+  auth.error = null
+}
+
+// â”€â”€ Slideshow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const slides = [
+  '/images/login-bg-1.webp',
+  '/images/login-bg-2.webp',
+  '/images/login-bg-3.webp',
+]
 </script>
 
 <style scoped>
-.login-container {
+.login-page {
+  position: relative;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card-wrapper {
+  position: relative;
+  z-index: 1;
+  padding: 24px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .login-card {
-  background: white;
-  padding: 0;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 420px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  box-shadow: var(--shadow-xl);
 }
 
-.form-tabs {
+.login-card__top {
+  height: 5px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+}
+
+.login-card__body { padding: 32px 36px 36px; }
+
+.login-card__logo {
   display: flex;
-  background: #f5f5f5;
+  justify-content: center;
+  margin-bottom: 24px;
 }
 
-.tab-button {
+.login-card__logo-text {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-primary);
+  letter-spacing: 4px;
+}
+
+.login-tabs {
+  display: flex;
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.login-tabs__tab {
   flex: 1;
-  padding: 1rem;
+  padding: 9px;
   border: none;
   background: transparent;
-  color: #666;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: var(--radius-full);
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
   cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
+  transition: all var(--transition-fast);
 }
 
-.tab-button:hover {
-  background: rgba(102, 126, 234, 0.1);
+.login-tabs__tab--active {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
 }
 
-.tab-button.active {
-  color: #667eea;
-  background: white;
-}
-
-.tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  color: #333;
-  font-size: 1.5rem;
+.login-card__error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: var(--text-sm);
+  margin-bottom: 16px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2.5rem;
+  gap: 16px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.login-form__forgot { text-align: right; margin-top: -8px; }
+
+.login-form__link {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
 }
 
-label {
-  font-weight: 500;
-  color: #555;
-  font-size: 0.9rem;
+.login-form__link:hover { color: var(--color-primary); }
+
+.login-card__switch {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: 20px;
 }
 
-input {
-  padding: 0.75rem 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.checkbox-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: -0.5rem;
-}
-
-.checkbox-group input[type="checkbox"] {
-  width: auto;
-  cursor: pointer;
-  accent-color: #667eea;
-}
-
-.checkbox-group label {
-  font-weight: 400;
-  font-size: 0.9rem;
-  cursor: pointer;
-  margin: 0;
-}
-
-.btn-submit {
-  padding: 0.875rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.login-card__switch-btn {
+  background: none;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  margin-top: 0.5rem;
-}
-
-.btn-submit:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-submit:active {
-  transform: translateY(0);
-}
-
-.form-footer {
-  display: flex;
-  justify-content: center;
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.link {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.link:hover {
+  padding: 0;
+  margin-left: 4px;
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .login-card__body { padding: 24px 20px 28px; }
 }
 </style>
